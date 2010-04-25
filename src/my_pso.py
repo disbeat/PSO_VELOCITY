@@ -11,26 +11,47 @@ from math import sqrt, sin, cos, pi
 from pylab import *
 from random import uniform
 
+filename = "out.csv"
+
+OUTPUT = open(filename, 'w')
+
+
+def saveResult(result, run, weight_inertia, phi_1, phi_2, type_problem):
+    best = type_problem([generation[0] for generation in result])
+    best_average = type_problem([generation[1] for generation in result])
+    OUTPUT.write( ("run:;%i;inertia:;%f;phi_1:;%f;phi_2:;%f;best;%f;average;%f\n" % (run, weight_inertia, phi_1, phi_2, best, best_average)).replace(".",",") )
+    line = ""
+    for value in result:
+        line = line + str(value[0]).replace(".", ",") + ";"
+    OUTPUT.write( line + "\n" )
+    line = ""
+    for value in result:
+        line = line + str(value[1]).replace(".", ",") + ";"
+    OUTPUT.write( line + "\n" )
 
 # colect and display
-def run(numb_runs,numb_generations,numb_particles,weight_inertia, phi_1,phi_2,vel_max, domain, function,type_problem):
-    
-    # initialize population
-    # initialization
-    numb_dimensions = len(domain)
-    particles = [[generate_particle(domain),0] for count in range(numb_particles)]
-    velocities = [generate_velocity(vel_max, numb_dimensions) for count in range(numb_particles)]
+def run(numb_runs,numb_generations,numb_particles,weight_inertia_list, phi_1_list,phi_2_list,vel_max, domain, function,type_problem):
+    global OUTPUT
     
     # Colect Data
     statistics_total = []
     print 'Wait, please '
     for i in range(numb_runs):
-        statistics_total.append( pso(numb_generations, deepcopy(particles), deepcopy(velocities), weight_inertia, phi_1,phi_2,vel_max, domain, function,type_problem) )
+        
+        # initialize population
+        numb_dimensions = len(domain)
+        particles = [[generate_particle(domain),0] for count in range(numb_particles)]
+        velocities = [generate_velocity(vel_max, numb_dimensions) for count in range(numb_particles)]
+        
+        for weight_inertia in weight_inertia_list:
+            for phi_1 in phi_1_list:
+                for phi_2 in phi_2_list:
+                    execution_result = pso(numb_generations, deepcopy(particles), deepcopy(velocities), weight_inertia, phi_1,phi_2,vel_max, domain, function,type_problem)
+                    saveResult(execution_result, i, weight_inertia, phi_1, phi_2, type_problem)
+                    statistics_total.append( execution_result )
     print "That's it!"
      
-    for i in range(numb_runs):
-        results = statistics_total[i]
-        print [generation for generation in results]
+    
     
     # Process data: best and average by generation
     results = zip(*statistics_total)   
@@ -129,7 +150,7 @@ def pso(numb_generations, particles, velocities, weight_inertia, phi_1, phi_2, v
         generation_best_fitness = best_past[global_best][1]
         statistics_by_generation.append([generation_best_fitness,generation_average_fitness])
     # give me the best!
-    print '\nBest Solution: %s\nFitness: %0.2f' % (best_past[global_best][0],best_past[global_best][1])
+    print 'Best Solution: %s\nFitness: %0.2f\n' % (best_past[global_best][0],best_past[global_best][1])
     return statistics_by_generation
     
     
@@ -225,4 +246,4 @@ if __name__== '__main__':
     #print pso(1000,20,1,2,2,0.8,[[-2.048,2.048],[-2.048,2.048]],de_jong_f2,max)
     
     """ run(numb_runs, numb_generations, numb_particles, weight_inertia, phi_1, phi_2, vel_max,                          domain,   function, type_problem) """
-    run(           10,             100,             15,            0.8,     2,     2,     0.8, [[-2.048,2.048],[-2.048,2.048]], de_jong_f2,          max)
+    run(           10,             100,             15,            [0.8],     [2],     [2],     0.8, [[-2.048,2.048],[-2.048,2.048]], de_jong_f2,          max)

@@ -16,18 +16,20 @@ filename = "out.csv"
 OUTPUT = open(filename, 'w')
 
 
-def saveResult(result, run, weight_inertia, phi_1, phi_2, type_problem):
+def saveResult(result, run, weight_inertia, phi_1, phi_2, type_problem, saveAllStates = False):
     best = type_problem([generation[0] for generation in result])
     best_average = type_problem([generation[1] for generation in result])
+    print ("run:;%i;inertia:;%f;phi_1:;%f;phi_2:;%f;best;%f;average;%f" % (run, weight_inertia, phi_1, phi_2, best, best_average)).replace(".",",")
     OUTPUT.write( ("run:;%i;inertia:;%f;phi_1:;%f;phi_2:;%f;best;%f;average;%f\n" % (run, weight_inertia, phi_1, phi_2, best, best_average)).replace(".",",") )
-    line = ""
-    for value in result:
-        line = line + str(value[0]).replace(".", ",") + ";"
-    OUTPUT.write( line + "\n" )
-    line = ""
-    for value in result:
-        line = line + str(value[1]).replace(".", ",") + ";"
-    OUTPUT.write( line + "\n" )
+    if (saveAllStates):
+        line = ""
+        for value in result:
+            line = line + str(value[0]).replace(".", ",") + ";"
+        OUTPUT.write( line + "\n" )
+        line = ""
+        for value in result:
+            line = line + str(value[1]).replace(".", ",") + ";"
+        OUTPUT.write( line + "\n" )
 
 # colect and display
 def run(numb_runs,numb_generations,numb_particles,weight_inertia_list, phi_1_list,phi_2_list,vel_max, domain, function,type_problem):
@@ -52,8 +54,7 @@ def run(numb_runs,numb_generations,numb_particles,weight_inertia_list, phi_1_lis
     print "That's it!"
      
     
-    
-    # Process data: best and average by generation
+    '''# Process data: best and average by generation
     results = zip(*statistics_total)   
     best = [type_problem([result[0] for result in generation]) for generation in results]
     best_average = [sum([result[0] for result in generation])/float(numb_runs) for generation in results]
@@ -73,6 +74,7 @@ def run(numb_runs,numb_generations,numb_particles,weight_inertia_list, phi_1_lis
     else:
         legend(loc='upper right')
     show()
+    '''
     
 # main program
 
@@ -103,8 +105,13 @@ def pso(numb_generations, particles, velocities, weight_inertia, phi_1, phi_2, v
     particles = [[part, function(part)] for [part,fit] in particles]
     best_past = deepcopy(particles)
     
+    iteration = -1
+    
     # statistics
     statistics_by_generation = []
+    
+    global_best = find_global_best(best_past, type_problem)
+    
     
     # Run!
     for gen in range(numb_generations):
@@ -113,12 +120,12 @@ def pso(numb_generations, particles, velocities, weight_inertia, phi_1, phi_2, v
             # compute the global best. Is here for if we want to
             # modify the neighborhood. For the case of the neighborhood
             # equal to the set of particles can be put out of this cicle
-            global_best = find_global_best(best_past, type_problem)
+            
             # for each dimension
             for dim in range(numb_dimensions):
                 # update velocity
-                velocities[part][dim] = weight_inertia * velocities[part][dim] 
-                + phi_1 * (best_past[part][0][dim] - particles[part][0][dim])
+                velocities[part][dim] = weight_inertia * velocities[part][dim] \
+                + phi_1 * (best_past[part][0][dim] - particles[part][0][dim]) \
                 + phi_2 * (best_past[global_best][0][dim] - particles[part][0][dim])
                 # update position
                 particles[part][0][dim] = particles[part][0][dim] + velocities[part][dim]
@@ -139,18 +146,23 @@ def pso(numb_generations, particles, velocities, weight_inertia, phi_1, phi_2, v
                     # new global best?
                     if best_past[part][1] > best_past[global_best][1]:
                         global_best = part
+                    if global_best == part:
+                        iteration = gen
             else: # minimization problem
                 if particles[part][1] < best_past[part][1]:
                     best_past[part] = deepcopy(particles[part])
                     # new global best?
                     if best_past[part][1] < best_past[global_best][1]:
                         global_best = part
+                    if global_best == part:
+                        iteration = gen
         # update statistics
         generation_average_fitness = sum([particle[1] for particle in best_past])/float(numb_particles)
         generation_best_fitness = best_past[global_best][1]
         statistics_by_generation.append([generation_best_fitness,generation_average_fitness])
+        
     # give me the best!
-    print 'Best Solution: %s\nFitness: %0.2f\n' % (best_past[global_best][0],best_past[global_best][1])
+    print 'Best Solution: %s\nFitness: %0.2f\nIteration: %d' % (best_past[global_best][0],best_past[global_best][1], iteration)
     return statistics_by_generation
     
     
@@ -245,5 +257,6 @@ if __name__== '__main__':
     #print pso(1000,20,1,2,2,1.5,[[-5.12,5.12],[-5.12,5.12],[-5.12,5.12]],rastringin_3d,min)
     #print pso(1000,20,1,2,2,0.8,[[-2.048,2.048],[-2.048,2.048]],de_jong_f2,max)
     
-    """ run(numb_runs, numb_generations, numb_particles, weight_inertia, phi_1, phi_2, vel_max,                          domain,   function, type_problem) """
-    run(           10,             100,             15,            [0.8],     [2],     [2],     0.8, [[-2.048,2.048],[-2.048,2.048]], de_jong_f2,          max)
+    """ run(numb_runs, numb_generations, numb_particles,      weight_inertia,            phi_1,            phi_2, vel_max,                          domain,   function, type_problem) """
+    run(           30,            1000,            20, [0.4, 0.8, 1], [1, 2], [1, 2],     0.8,   \
+                   [[-5.12, 5.12],[-5.12, 5.12],[-5.12, 5.12]], rastringin_3d,          max)
